@@ -8,7 +8,7 @@ NUCLEO-F091RCによる12bit-ADCのため、0から4095の間の値が取得可�
 
 【送信データ構造（length = 20）】\
 length = 0 ：　ヘッダ（int型で0xFE）\
-length = 1 ：　復元後のデータの数（int型で9）\
+length = 1 ：　復元後のデータの数（int型で8）\
 length = 2 ：　MyoScanのCH0から得られた値の上位2桁（int型、CH0の値が4095ならここの値は40）\
 length = 3 ：　MyoScanのCH0から得られた値の下位2桁（int型、CH0の値が4095ならここの値は95）\
 length = 4 ~ 17 ：　MyoScanのCH1〜7から得られた値を代入、length = 2, 3の格納方法と同様\

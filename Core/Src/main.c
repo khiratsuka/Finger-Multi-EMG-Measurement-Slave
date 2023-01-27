@@ -1,20 +1,20 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2022 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2022 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -65,27 +65,27 @@ static void MX_ADC_Init(void);
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
+ * @brief  The application entry point.
+ * @retval int
+ */
 int main(void)
 {
   /* USER CODE BEGIN 1 */
 
-  //筋電位センサのデータ格納用
+  // 筋電位センサのデータ格納用
   __IO uint16_t sensor_raw_data[SENSOR_NUM];
   uint16_t sensor_data[SENSOR_NUM];
   uint16_t sensor_data_0, sensor_data_1, sensor_data_2, sensor_data_3, sensor_data_4, sensor_data_5, sensor_data_6, sensor_data_7;
   const int pickup2dec = 100;
   const int pickupParity = 0x00FF;
-  int upper2dec = 0, lower2dec = 0;	//センサ生値を二桁に分けて入れる
+  int upper2dec = 0, lower2dec = 0; // センサ生値を二桁に分けて入れる
   int parity = 0;
 
-  //USARTデータ送信用
-  uint8_t sensor_send_data[20] = {};	//[h(0xFE), データ個数, x.xxx, ..., パリティ, f] -> length = 1 + 1 + 2 * 8 + 1 + 1 = 20
-  sensor_send_data[0] = 0xFE;	//ヘッダ
-  sensor_send_data[1] = 9;		//データ個数
-  sensor_send_data[19] = 0xFF;	//フッタ
+  // USARTデータ送信用
+  uint8_t sensor_send_data[20] = {}; //[h(0xFE), データ個数, x.xxx, ..., パリティ, f] -> length = 1 + 1 + 2 * 8 + 1 + 1 = 20
+  sensor_send_data[0] = 0xFE;        // ヘッダ
+  sensor_send_data[1] = SENSOR_NUM;  // データ個数
+  sensor_send_data[19] = 0xFF;       // フッタ
   uint32_t start_code = 0;
 
   /* USER CODE END 1 */
@@ -113,22 +113,24 @@ int main(void)
   MX_ADC_Init();
   /* USER CODE BEGIN 2 */
 
-  //ADCのキャリブレーション
-  if (HAL_ADCEx_Calibration_Start(&hadc) !=  HAL_OK)
+  // ADCのキャリブレーション
+  if (HAL_ADCEx_Calibration_Start(&hadc) != HAL_OK)
   {
     Error_Handler();
   }
 
-  //DMAを用いて8ポートまとめてADC
+  // DMAを用いて8ポートまとめてADC
   if (HAL_ADC_Start_DMA(&hadc, (uint32_t *)sensor_raw_data, SENSOR_NUM) != HAL_OK)
   {
     Error_Handler();
   }
 
-  //受信側UARTプログラム待ち
-  while(1){
-	  HAL_UART_Receive(&huart2, &start_code, sizeof(start_code), 1);
-	  if(start_code == 0xFF)	break;
+  // 受信側UARTプログラム待ち
+  while (1)
+  {
+    HAL_UART_Receive(&huart2, &start_code, sizeof(start_code), 1);
+    if (start_code == 0xFF)
+      break;
   }
 
   /* USER CODE END 2 */
@@ -137,7 +139,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    //値更新用、なくても動くかも
+    // 値更新用、なくても動くかも
     sensor_data_0 = sensor_raw_data[0];
     sensor_data_1 = sensor_raw_data[1];
     sensor_data_2 = sensor_raw_data[2];
@@ -147,21 +149,22 @@ int main(void)
     sensor_data_6 = sensor_raw_data[6];
     sensor_data_7 = sensor_raw_data[7];
 
-    //パリティをリセット
+    // パリティをリセット
     parity = 0;
 
-    //AD変換した値を上位2桁・下位2桁に分けて送信する
-    //パリティは2桁ずつに分けた数字を全て足し合せ、0x00FFとANDをとったものとした
-    for(int i = 0; i < SENSOR_NUM; i++){
-    	upper2dec = sensor_raw_data[i] / pickup2dec;
-    	lower2dec = sensor_raw_data[i] % pickup2dec;
-    	sensor_send_data[(2 * i) + 2] = upper2dec;
-    	sensor_send_data[(2 * i) + 3] = lower2dec;
-    	parity = parity + upper2dec + lower2dec;
+    // AD変換した値を上位2桁・下位2桁に分けて送信する
+    // パリティは2桁ずつに分けた数字を全て足し合せ、0x00FFとANDをとったものとした
+    for (int i = 0; i < SENSOR_NUM; i++)
+    {
+      upper2dec = sensor_raw_data[i] / pickup2dec;
+      lower2dec = sensor_raw_data[i] % pickup2dec;
+      sensor_send_data[(2 * i) + 2] = upper2dec;
+      sensor_send_data[(2 * i) + 3] = lower2dec;
+      parity = parity + upper2dec + lower2dec;
     }
-    sensor_send_data[18]= parity & pickupParity;
+    sensor_send_data[18] = parity & pickupParity;
 
-    //USART送信
+    // USART送信
     HAL_UART_Transmit(&huart2, &sensor_send_data, sizeof(sensor_send_data), 50);
     /* USER CODE END WHILE */
 
@@ -171,9 +174,9 @@ int main(void)
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
+ * @brief System Clock Configuration
+ * @retval None
+ */
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -181,9 +184,9 @@ void SystemClock_Config(void)
   RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_HSI14;
+   * in the RCC_OscInitTypeDef structure.
+   */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_HSI14;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSI14State = RCC_HSI14_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
@@ -198,9 +201,8 @@ void SystemClock_Config(void)
   }
 
   /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1;
+   */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
@@ -218,10 +220,10 @@ void SystemClock_Config(void)
 }
 
 /**
-  * @brief ADC Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief ADC Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_ADC_Init(void)
 {
 
@@ -236,7 +238,7 @@ static void MX_ADC_Init(void)
   /* USER CODE END ADC_Init 1 */
 
   /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
-  */
+   */
   hadc.Instance = ADC1;
   hadc.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
   hadc.Init.Resolution = ADC_RESOLUTION_12B;
@@ -257,7 +259,7 @@ static void MX_ADC_Init(void)
   }
 
   /** Configure for the selected ADC regular channel to be converted.
-  */
+   */
   sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
   sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
@@ -267,7 +269,7 @@ static void MX_ADC_Init(void)
   }
 
   /** Configure for the selected ADC regular channel to be converted.
-  */
+   */
   sConfig.Channel = ADC_CHANNEL_1;
   if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
   {
@@ -275,7 +277,7 @@ static void MX_ADC_Init(void)
   }
 
   /** Configure for the selected ADC regular channel to be converted.
-  */
+   */
   sConfig.Channel = ADC_CHANNEL_4;
   if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
   {
@@ -283,7 +285,7 @@ static void MX_ADC_Init(void)
   }
 
   /** Configure for the selected ADC regular channel to be converted.
-  */
+   */
   sConfig.Channel = ADC_CHANNEL_6;
   if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
   {
@@ -291,7 +293,7 @@ static void MX_ADC_Init(void)
   }
 
   /** Configure for the selected ADC regular channel to be converted.
-  */
+   */
   sConfig.Channel = ADC_CHANNEL_7;
   if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
   {
@@ -299,7 +301,7 @@ static void MX_ADC_Init(void)
   }
 
   /** Configure for the selected ADC regular channel to be converted.
-  */
+   */
   sConfig.Channel = ADC_CHANNEL_8;
   if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
   {
@@ -307,7 +309,7 @@ static void MX_ADC_Init(void)
   }
 
   /** Configure for the selected ADC regular channel to be converted.
-  */
+   */
   sConfig.Channel = ADC_CHANNEL_9;
   if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
   {
@@ -315,7 +317,7 @@ static void MX_ADC_Init(void)
   }
 
   /** Configure for the selected ADC regular channel to be converted.
-  */
+   */
   sConfig.Channel = ADC_CHANNEL_10;
   if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
   {
@@ -324,14 +326,13 @@ static void MX_ADC_Init(void)
   /* USER CODE BEGIN ADC_Init 2 */
 
   /* USER CODE END ADC_Init 2 */
-
 }
 
 /**
-  * @brief USART2 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief USART2 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_USART2_UART_Init(void)
 {
 
@@ -359,12 +360,11 @@ static void MX_USART2_UART_Init(void)
   /* USER CODE BEGIN USART2_Init 2 */
 
   /* USER CODE END USART2_Init 2 */
-
 }
 
 /**
-  * Enable DMA controller clock
-  */
+ * Enable DMA controller clock
+ */
 static void MX_DMA_Init(void)
 {
 
@@ -375,14 +375,13 @@ static void MX_DMA_Init(void)
   /* DMA1_Ch1_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Ch1_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Ch1_IRQn);
-
 }
 
 /**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief GPIO Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -408,7 +407,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
-
 }
 
 /* USER CODE BEGIN 4 */
@@ -416,9 +414,9 @@ static void MX_GPIO_Init(void)
 /* USER CODE END 4 */
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
@@ -430,14 +428,14 @@ void Error_Handler(void)
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
+ * @brief  Reports the name of the source file and the source line number
+ *         where the assert_param error has occurred.
+ * @param  file: pointer to the source file name
+ * @param  line: assert_param error line source number
+ * @retval None
+ */
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
